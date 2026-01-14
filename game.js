@@ -5,7 +5,6 @@ const ctx = canvas.getContext("2d");
 const mainMenu = document.getElementById("mainMenu");
 const pauseMenu = document.getElementById("pauseMenu");
 const gameOverMenu = document.getElementById("gameOverMenu");
-const weaponSelectMenu = document.getElementById("weaponSelectMenu");
 
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -67,14 +66,12 @@ const weapons = {
         fireRate: 0.2
     },
     weapon2: { // Dual Laser
-        cost: 50,
         speed: 7,
         color: "cyan",
         damage: 1,
         fireRate: 0.15
     },
     weapon3: { // Scatter Shot
-        cost: 100,
         speed: 4,
         color: "orange",
         damage: 0.5,
@@ -82,14 +79,12 @@ const weapons = {
         scatter: true
     },
     weapon4: { // Plasma Cannon
-        cost: 150,
         speed: 6,
         color: "lime",
         damage: 2,
         fireRate: 0.25
     },
     weapon5: { // Omega Beam
-        cost: 200,
         speed: 8,
         color: "magenta",
         damage: 3,
@@ -216,6 +211,21 @@ function fireRocket() {
 
 function updateScore() {
     score += 10;
+    updateWeapon();
+}
+
+function updateWeapon() {
+    if (score >= 200) {
+        player.currentWeapon = "weapon5";
+    } else if (score >= 150) {
+        player.currentWeapon = "weapon4";
+    } else if (score >= 100) {
+        player.currentWeapon = "weapon3";
+    } else if (score >= 50) {
+        player.currentWeapon = "weapon2";
+    } else {
+        player.currentWeapon = "weapon1";
+    }
 }
 
 function checkCollisions() {
@@ -400,7 +410,6 @@ document.getElementById("creditsButton").addEventListener("click", function() {
 });
 
 document.getElementById("settingsButton").addEventListener("click", function() {
-    showWeaponSelectMenu();
 });
 
 document.getElementById("continueButton").addEventListener("click", function() {
@@ -420,26 +429,6 @@ document.getElementById("restartButton").addEventListener("click", function() {
     pauseMenu.style.display = "none";
 });
 
-document.getElementById("weapon1Button").addEventListener("click", function() {
-    buyWeapon("weapon1");
-});
-
-document.getElementById("weapon2Button").addEventListener("click", function() {
-    buyWeapon("weapon2");
-});
-
-document.getElementById("weapon3Button").addEventListener("click", function() {
-    buyWeapon("weapon3");
-});
-
-document.getElementById("weapon4Button").addEventListener("click", function() {
-    buyWeapon("weapon4");
-});
-
-document.getElementById("weapon5Button").addEventListener("click", function() {
-    buyWeapon("weapon5");
-});
-
 document.getElementById("backToMenu").addEventListener("click", function() {
     gameState = "mainMenu";
     resetGame();
@@ -452,28 +441,6 @@ document.getElementById("tryAgain").addEventListener("click", function() {
     resetGame();
     hideGameOverMenu();
 });
-
-function showWeaponSelectMenu() {
-    weaponSelectMenu.style.display = "flex";
-    mainMenu.style.display = "none"; //Hide the main menu when is weapon select
-}
-
-function hideWeaponSelectMenu() {
-    weaponSelectMenu.style.display = "none";
-    mainMenu.style.display = "flex"; //Return to the main menu
-}
-
-function buyWeapon(weaponName) {
-    const weapon = weapons[weaponName];
-    if (score >= weapon.cost) {
-        score -= weapon.cost;
-        player.currentWeapon = weaponName;
-        weaponSelectMenu.style.display = "none";
-        mainMenu.style.display = "flex";
-    } else {
-        alert("Not enough points!");
-    }
-}
 
 // --- Game Loop ---
 function update() {
@@ -551,9 +518,10 @@ function update() {
 
 // --- Initial Setup ---
 
-// Add event listeners for weapon selection buttons
-const weaponButtons = ["weapon1Button", "weapon2Button", "weapon3Button", "weapon4Button", "weapon5Button"];
-weaponButtons.forEach(buttonId => {
-    document.getElementById(buttonId).addEventListener("click", () => {
-        buyWeapon(buttonId.replace("Button", "")); // Extract weapon name
-    });
+updateWeapon();
+
+//Hide all Menus Except the Game
+hideGameOverMenu();
+
+// Start the game loop
+update();
