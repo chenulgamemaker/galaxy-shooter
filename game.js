@@ -4,9 +4,8 @@ const ctx = canvas.getContext("2d");
 
 const mainMenu = document.getElementById("mainMenu");
 const pauseMenu = document.getElementById("pauseMenu");
-const gameOverMenu = createGameOverMenu();
-
-document.body.appendChild(gameOverMenu);
+const gameOverMenu = document.getElementById("gameOverMenu");
+const weaponSelectMenu = document.getElementById("weaponSelectMenu");
 
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -14,36 +13,36 @@ let gameState = "mainMenu"; // mainMenu, playing, paused, gameOver
 
 // --- Game Objects ---
 let player = {
-  x: 50,  // Start on the left
+  x: 50,
   y: 300,
   width: 30,
   height: 40,
   color: "white",
   speed: 3,
-  health: 5,  // Start with 5 health
+  health: 5,
+  currentWeapon: "weapon1", // Default weapon
   draw: function() {
     // More detailed player sprite (example)
     ctx.fillStyle = this.color;
     ctx.fillRect(this.x, this.y, this.width, this.height);
-    ctx.fillStyle = "lightgray";  // Example detail
+    ctx.fillStyle = "lightgray";
     ctx.fillRect(this.x + 5, this.y + 10, this.width - 10, this.height - 20);
   },
   move: function(direction) {
     switch (direction) {
       case "up": this.y -= this.speed; break;
       case "down": this.y += this.speed; break;
-      //No left/right movement in this version
     }
-    this.y = Math.max(0, Math.min(this.y, canvas.height - this.height)); // Keep within bounds
+    this.y = Math.max(0, Math.min(this.y, canvas.height - this.height));
   }
 };
 
 let rockets = [];
 let enemies = [];
-let enemyBullets = []; // Array to hold enemy bullets
+let enemyBullets = [];
 let score = 0;
 let level = 1;
-let boss = null; // Boss enemy
+let boss = null;
 let bossSpawned = false;
 
 // --- Input Handling ---
@@ -51,13 +50,51 @@ const keys = {};
 document.addEventListener("keydown", function(e) { keys[e.key] = true; });
 document.addEventListener("keyup", function(e) { keys[e.key] = false; });
 
-// --- Functions ---
+// --- Weapon Definitions ---
+const weapons = {
+    weapon1: { // Basic Blaster
+        speed: 5,
+        color: "yellow",
+        damage: 1,
+        fireRate: 0.2
+    },
+    weapon2: { // Dual Laser
+        cost: 50,
+        speed: 7,
+        color: "cyan",
+        damage: 1,
+        fireRate: 0.15
+    },
+    weapon3: { // Scatter Shot
+        cost: 100,
+        speed: 4,
+        color: "orange",
+        damage: 0.5,
+        fireRate: 0.3,
+        scatter: true
+    },
+    weapon4: { // Plasma Cannon
+        cost: 150,
+        speed: 6,
+        color: "lime",
+        damage: 2,
+        fireRate: 0.25
+    },
+    weapon5: { // Omega Beam
+        cost: 200,
+        speed: 8,
+        color: "magenta",
+        damage: 3,
+        fireRate: 0.35
+    }
+};
 
+// --- Functions ---
 function generateTone(frequency, duration) {
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 
-    oscillator.type = 'square'; // Try 'sine', 'triangle', 'sawtooth'
+    oscillator.type = 'square';
     oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
     gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
 
@@ -69,10 +106,10 @@ function generateTone(frequency, duration) {
 }
 
 function spawnEnemy() {
-    const enemyType = Math.random() < 0.8 ? "normal" : "shooter"; // 80% normal, 20% shooter
+    const enemyType = Math.random() < 0.8 ? "normal" : "shooter";
     const enemy = {
         x: 800,
-        y: Math.random() * (canvas.height - 30), // Slightly larger enemy
+        y: Math.random() * (canvas.height - 30),
         width: 40,
         height: 30,
         color: enemyType === "normal" ? "red" : "purple",
@@ -81,11 +118,11 @@ function spawnEnemy() {
         draw: function() {
             ctx.fillStyle = this.color;
             ctx.fillRect(this.x, this.y, this.width, this.height);
-            ctx.fillStyle = this.color === "red" ? "darkred" : "darkpurple";  // Example detail
+            ctx.fillStyle = this.color === "red" ? "darkred" : "darkpurple";
             ctx.fillRect(this.x + 5, this.y + 5, this.width - 10, this.height - 10);
         },
         shoot: function() {
-            if (enemyType === "shooter" && Math.random() < 0.02) { // Reduced rate to make it manageable
+            if (enemyType === "shooter" && Math.random() < 0.02) {
                 const bullet = {
                     x: this.x,
                     y: this.y + this.height / 2,
@@ -118,7 +155,7 @@ function spawnBoss() {
             ctx.fillRect(this.x + 10, this.y + 10, this.width - 20, this.height - 20);
         },
         shoot: function() {
-            if (Math.random() < 0.01) { // Reduced boss shooting rate even further
+            if (Math.random() < 0.01) {
                 const bullet = {
                     x: this.x,
                     y: this.y + this.height / 2,
@@ -135,23 +172,42 @@ function spawnBoss() {
     bossSpawned = true;
 }
 
+let lastFireTime = 0;
 
 function fireRocket() {
-  const rocket = {
-    x: player.x + player.width,
-    y: player.y + player.height / 2 - 2.5,
-    width: 10,
-    height: 5,
-    color: "yellow",
-    speed: 5,
-    glitch: Math.random() < 0.1 // 10% chance of getting stuck
-  };
-  rockets.push(rocket);
-  generateTone(440, 0.1);
+    const now = Date.now();
+    const currentWeapon = weapons[player.currentWeapon];
+
+    if (now - lastFireTime > (1000 * currentWeapon.fireRate)) {
+        lastFireTime = now;
+
+        const baseRocket = {
+            x: player.x + player.width,
+            y: player.y + player.height / 2 - 2.5,
+            width: 10,
+            height: 5,
+            color: currentWeapon.color,
+            speed: currentWeapon.speed,
+            damage: currentWeapon.damage,
+            glitch: Math.random() < 0.1
+        };
+
+        if (currentWeapon.scatter) {
+            for (let i = -1; i <= 1; i++) {
+                const rocket = { ...baseRocket };
+                rocket.y += i * 5;
+                rockets.push(rocket);
+            }
+        } else {
+            rockets.push(baseRocket);
+        }
+
+        generateTone(440, 0.1);
+    }
 }
 
 function updateScore() {
-  score += 10;
+    score += 10;
 }
 
 function checkCollisions() {
@@ -161,9 +217,9 @@ function checkCollisions() {
             player.y < enemies[i].y + enemies[i].height &&
             player.y + player.height > enemies[i].y) {
             // Collision detected!
-            player.health--; //Reduce Health
-            enemies.splice(i, 1); //Remove Enemy
-            generateTone(220,0.2) //Hurt sound
+            player.health--;
+            enemies.splice(i, 1);
+            generateTone(220,0.2)
             console.log("Player hit! Health: " + player.health);
             if (player.health <= 0) {
               gameState = "gameOver";
@@ -179,7 +235,7 @@ function checkCollisions() {
                 rockets[j].y + rockets[j].height > enemies[i].y) {
                 // Rocket hits enemy
                 enemies.splice(i, 1);
-                rockets.splice(j, 1); //Remove Rocket as well.
+                rockets.splice(j, 1);
                 updateScore();
                 generateTone(880, 0.2);
                 i--;
@@ -196,9 +252,9 @@ function checkCollisions() {
             player.y < enemyBullets[i].y + enemyBullets[i].height &&
             player.y + player.height > enemyBullets[i].y) {
             // Collision detected!
-            player.health--; //Reduce Health
-            enemyBullets.splice(i, 1); //Remove Enemy Bullet
-            generateTone(220,0.2) //Hurt sound
+            player.health--;
+            enemyBullets.splice(i, 1);
+            generateTone(220,0.2)
             console.log("Player hit! Health: " + player.health);
             if (player.health <= 0) {
               gameState = "gameOver";
@@ -207,19 +263,56 @@ function checkCollisions() {
             break;
         }
     }
+
+    // Check for boss collision
+    if (boss){
+      if (player.x < boss.x + boss.width &&
+          player.x + player.width > boss.x &&
+          player.y < boss.y + boss.height &&
+          player.y + player.height > boss.y) {
+          // Player hit Boss.
+          player.health--;
+          if (player.health <= 0){
+            gameState = "gameOver";
+            showGameOverMenu();
+          }
+      }
+    }
+
+    //Check boss and rockects colisions
+    if(boss){
+      for (let j = 0; j < rockets.length; j++) {
+          if (rockets[j].x < boss.x + boss.width &&
+              rockets[j].x + rockets[j].width > boss.x &&
+              rockets[j].y < boss.y + boss.height &&
+              rockets[j].y + rockets[j].height > boss.y) {
+              // Rocket hits the boss!
+              boss.health--;
+              rockets.splice(j, 1); //Remove Rocket as well.
+              if (boss.health <= 0){
+                boss = null;
+                bossSpawned = false;
+                updateScore();
+              }
+              generateTone(880, 0.2);
+              break;
+          }
+      }
+    }
+
 }
 
 function drawHearts() {
     for (let i = 0; i < player.health; i++) {
-        ctx.fillStyle = "red"; // Heart color
-        ctx.beginPath(); // Start drawing a heart shape
-        ctx.moveTo(700 + (i * 25), 30); // Start position for the heart
-        ctx.lineTo(705 + (i * 25), 25); // Top left curve
-        ctx.lineTo(710 + (i * 25), 30); // Top right curve
-        ctx.lineTo(700 + (i * 25), 40); // Bottom point of the heart
-        ctx.lineTo(690 + (i * 25), 30); // Back to the start point to close the shape
-        ctx.closePath(); // Close the path
-        ctx.fill(); // Fill the heart
+        ctx.fillStyle = "red";
+        ctx.beginPath();
+        ctx.moveTo(700 + (i * 25), 30);
+        ctx.lineTo(705 + (i * 25), 25);
+        ctx.lineTo(710 + (i * 25), 30);
+        ctx.lineTo(700 + (i * 25), 40);
+        ctx.lineTo(690 + (i * 25), 30);
+        ctx.closePath();
+        ctx.fill();
     }
 }
 
@@ -242,7 +335,7 @@ function draw() {
 
     // Draw enemies
     enemies.forEach(enemy => {
-        enemy.draw(); // Use the enemy's draw method
+        enemy.draw();
     });
 
     if (boss) {
@@ -254,47 +347,27 @@ function draw() {
     ctx.fillText("Score: " + score, 20, 30);
     ctx.fillText("Level: " + level, 20, 60);
 
-    drawHearts(); // Draw health indicator
+    drawHearts();
 
 }
 
-function createGameOverMenu() {
-    const menu = document.createElement("div");
-    menu.id = "gameOverMenu";
-    menu.style.position = "absolute";
-    menu.style.top = "0";
-    menu.style.left = "0";
-    menu.style.width = "100%";
-    menu.style.height = "100%";
-    menu.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
-    menu.style.color = "white";
-    menu.style.textAlign = "center";
-    menu.style.fontFamily = "sans-serif";
-    menu.style.display = "none"; // Hidden by default
-    menu.style.flexDirection = "column";
-    menu.style.justifyContent = "center";
-    menu.style.alignItems = "center";
-    menu.innerHTML = `
-        <h1>Game Over!</h1>
-        <p>Score: <span id="finalScore">0</span></p>
-        <button id="backToMenu">Back to Menu</button>
-        <button id="tryAgain">Try Again</button>
-    `;
+function resetGame() {
+    score = 0;
+    level = 1;
+    player.health = 5;
+    player.x = 50;
+    player.y = 300;
+    player.currentWeapon = "weapon1";
+    rockets = [];
+    enemies = [];
+    enemyBullets = [];
+    boss = null;
+    bossSpawned = false;
+    lastFireTime = 0;  //Reset last firetime.
+}
 
-    // Event listeners for buttons
-    menu.querySelector("#backToMenu").addEventListener("click", () => {
-        gameState = "mainMenu";
-        resetGame();
-        showMainMenu();
-    });
-
-    menu.querySelector("#tryAgain").addEventListener("click", () => {
-        gameState = "playing";
-        resetGame();
-        hideGameOverMenu();
-    });
-
-    return menu;
+function showMainMenu() {
+    mainMenu.style.display = "flex";
 }
 
 function showGameOverMenu() {
@@ -306,26 +379,98 @@ function hideGameOverMenu() {
     gameOverMenu.style.display = "none";
 }
 
-function resetGame() {
-    score = 0;
-    level = 1;
-    player.health = 5;
-    player.x = 50;
-    player.y = 300;
-    rockets = [];
-    enemies = [];
-    enemyBullets = [];
-    boss = null;
-    bossSpawned = false;
-}
+// --- Menu Button Event Listeners ---
+document.getElementById("playButton").addEventListener("click", function() {
+    gameState = "playing";
+    mainMenu.style.display = "none";
+    resetGame();
+    hideGameOverMenu();
+});
 
-function showMainMenu() {
+document.getElementById("creditsButton").addEventListener("click", function() {
+    alert("Created by You!");
+});
+
+document.getElementById("settingsButton").addEventListener("click", function() {
+    showWeaponSelectMenu();
+});
+
+document.getElementById("continueButton").addEventListener("click", function() {
+    gameState = "playing";
+    pauseMenu.style.display = "none";
+});
+
+document.getElementById("quitButton").addEventListener("click", function() {
+    gameState = "mainMenu";
+    pauseMenu.style.display = "none";
     mainMenu.style.display = "flex";
+});
+
+document.getElementById("restartButton").addEventListener("click", function() {
+    gameState = "playing"; //Restart the game
+    resetGame();
+    pauseMenu.style.display = "none";
+});
+
+document.getElementById("weapon1Button").addEventListener("click", function() {
+    buyWeapon("weapon1");
+});
+
+document.getElementById("weapon2Button").addEventListener("click", function() {
+    buyWeapon("weapon2");
+});
+
+document.getElementById("weapon3Button").addEventListener("click", function() {
+    buyWeapon("weapon3");
+});
+
+document.getElementById("weapon4Button").addEventListener("click", function() {
+    buyWeapon("weapon4");
+});
+
+document.getElementById("weapon5Button").addEventListener("click", function() {
+    buyWeapon("weapon5");
+});
+
+document.getElementById("backToMenu").addEventListener("click", function() {
+    gameState = "mainMenu";
+    resetGame();
+    hideGameOverMenu();
+    showMainMenu();
+});
+
+document.getElementById("tryAgain").addEventListener("click", function() {
+    gameState = "playing";
+    resetGame();
+    hideGameOverMenu();
+});
+
+function showWeaponSelectMenu() {
+    weaponSelectMenu.style.display = "flex";
+    mainMenu.style.display = "none"; //Hide the main menu when is weapon select
 }
 
+function hideWeaponSelectMenu(){
+    weaponSelectMenu.style.display = "none";
+    mainMenu.style.display = "flex"; //Return to the main menu
+}
+
+function buyWeapon(weaponName) {
+    const weapon = weapons[weaponName];
+    if (score >= weapon.cost) {
+        score -= weapon.cost;
+        player.currentWeapon = weaponName;
+        weaponSelectMenu.style.display = "none";
+        mainMenu.style.display = "flex";
+    } else {
+        alert("Not enough points!");
+    }
+}
+
+// --- Game Loop ---
 function update() {
     if (gameState === "playing") {
-        // Player movement (up/down only)
+        // Player movement
         if (keys["w"] || keys["ArrowUp"]) player.move("up");
         if (keys["s"] || keys["ArrowDown"]) player.move("down");
 
@@ -337,10 +482,10 @@ function update() {
           keys.spacebarHeld = false;
         }
 
-        // Enemy movement and spawning
+        // Enemy movement and shooting
         enemies.forEach(enemy => {
             enemy.x -= enemy.speed;
-            enemy.shoot(); // Enemies can shoot bullets
+            enemy.shoot();
         });
 
         // Enemy bullet movement
@@ -368,30 +513,9 @@ function update() {
           }
         }
 
-        //Check boss and rockects colisions
-        if(boss){
-          for (let j = 0; j < rockets.length; j++) {
-              if (rockets[j].x < boss.x + boss.width &&
-                  rockets[j].x + rockets[j].width > boss.x &&
-                  rockets[j].y < boss.y + boss.height &&
-                  rockets[j].y + rockets[j].height > boss.y) {
-                  // Rocket hits the boss!
-                  boss.health--;
-                  rockets.splice(j, 1); //Remove Rocket as well.
-                  if (boss.health <= 0){
-                    boss = null;
-                    bossSpawned = false;
-                    updateScore();
-                  }
-                  generateTone(880, 0.2);
-                  break;
-              }
-          }
-        }
-
         // Update rocket positions (with glitch)
         rockets.forEach(rocket => {
-          if (!rocket.glitch) { // If it's not glitched, move it
+          if (!rocket.glitch) {
               rocket.x += rocket.speed;
           }
         });
@@ -410,47 +534,22 @@ function update() {
           pauseMenu.style.display = "flex";
         }
 
-
     } else if (gameState === "gameOver") {
         // Game Over menu is now handled separately
     }
-    draw();  //Draw the game in every state
+    draw();
     requestAnimationFrame(update);
 }
 
-// --- Menu Button Event Listeners ---
-document.getElementById("playButton").addEventListener("click", function() {
-  gameState = "playing";
-  mainMenu.style.display = "none";
-  resetGame();
-  hideGameOverMenu();
+// --- Initial Setup ---
 
+// Add event listeners for weapon selection buttons
+const weaponButtons = ["weapon1Button", "weapon2Button", "weapon3Button", "weapon4Button", "weapon5Button"];
+weaponButtons.forEach(buttonId => {
+    document.getElementById(buttonId).addEventListener("click", () => {
+        buyWeapon(buttonId.replace("Button", ""));  // Extract weapon name
+    });
 });
 
-document.getElementById("creditsButton").addEventListener("click", function() {
-  alert("Created by You!"); // Replace with a more elaborate credits display
-});
-
-document.getElementById("settingsButton").addEventListener("click", function() {
-  alert("Settings are not implemented yet!");
-});
-
-document.getElementById("continueButton").addEventListener("click", function() {
-  gameState = "playing";
-  pauseMenu.style.display = "none";
-});
-
-document.getElementById("quitButton").addEventListener("click", function() {
-  gameState = "mainMenu";
-  pauseMenu.style.display = "none";
-  mainMenu.style.display = "flex";
-});
-
-document.getElementById("restartButton").addEventListener("click", function() {
-  document.getElementById("playButton").click();
-  pauseMenu.style.display = "none";
-});
-
-
-// --- Start the Game ---
-update(); // Start the game loop
+//Hide all Menus Except the Game
+hideGameOverMenu();
