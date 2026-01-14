@@ -1,0 +1,145 @@
+body {
+  margin: 0;
+}
+
+canvas {
+  background: #000; /* Black background */
+  display: block;
+}
+
+#gameContainer {
+  position: relative;
+  width: 800px;
+  height: 600px;
+  margin: 0 auto; /* Center the game */
+  overflow: hidden; /* Hide anything that goes outside the container */
+}
+
+/* Styles for the Main Menu */
+#mainMenu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8); /* Semi-transparent black */
+  color: white;
+  text-align: center;
+  font-family: sans-serif;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+#mainMenu h1 {
+  font-size: 3em;
+  margin-bottom: 20px;
+}
+
+#mainMenu button {
+  background-color: #4CAF50; /* Green */
+  border: none;
+  color: white;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 1.5em;
+  margin: 10px;
+  cursor: pointer;
+}
+
+/* Styles for the Pause Menu */
+#pauseMenu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8); /* Semi-transparent black */
+  color: white;
+  text-align: center;
+  font-family: sans-serif;
+  display: none; /* Initially hidden */
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+#pauseMenu button {
+  background-color: #333; /* Dark Gray */
+  border: none;
+  color: white;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 1.5em;
+  margin: 10px;
+  cursor: pointer;
+}
+
+#gameOverMenu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  text-align: center;
+  font-family: sans-serif;
+  display: none; /* Hidden by default */
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+#gameOverMenu button {
+  background-color: #333; /* Dark Gray */
+  border: none;
+  color: white;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 1.5em;
+  margin: 10px;
+  cursor: pointer;
+}
+
+/* Weapon Select Menu */
+#weaponSelectMenu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  text-align: center;
+  font-family: sans-serif;
+  display: none; /* Hidden by default */
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+#weaponSelectMenu h2 {
+    margin-bottom: 20px;
+}
+
+#weaponSelectMenu button {
+    background-color: #007bff; /* Blue */
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 1em;
+    margin: 5px;
+    cursor: pointer;
+    border-radius: 5px;
+}
